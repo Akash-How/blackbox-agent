@@ -31,7 +31,7 @@ policy pauses on destructive tools, and the agent manifest additionally pins the
 
 ## Quickstart
 
-Prerequisites: Node 20+, one LLM API key (Anthropic / OpenAI / Gemini), and a sandbox:
+Prerequisites: Node 20+, one LLM API key (OpenCode Zen / Anthropic / OpenAI / Gemini), and a sandbox:
 either a free [Daytona](https://www.daytona.io) API key, or on Linux/macOS the local
 fallback (`bwrap`, `socat`, `rg` on PATH — e.g. `sudo apt install bubblewrap socat ripgrep`).
 
@@ -57,7 +57,9 @@ npx @truefoundry/trueforge
 
 ```bash
 # 4. In a third terminal: provision everything in one shot
-export ANTHROPIC_API_KEY=sk-...        # or OPENAI_API_KEY / GEMINI_API_KEY
+# Pick ONE model key. Priority when several are set:
+#   OPENCODE_API_KEY > ANTHROPIC_API_KEY > OPENAI_API_KEY > GEMINI_API_KEY
+export OPENCODE_API_KEY=sk-...         # free "Ox Alpha" model via OpenCode Zen
 export DAYTONA_API_KEY=dtn_...         # optional if the Linux local sandbox is available
 export SKILL_REPO_URL=https://github.com/<you>/<this-repo>   # optional, enables the skill
 node scripts/setup-trueforge.mjs
