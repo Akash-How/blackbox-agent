@@ -7,7 +7,35 @@ import Sparkline from "./Sparkline.jsx";
 // stores re-initialize on every parent render.
 const SERVER = { type: "trueforge", baseUrl: "" };
 const AGENT = { mode: "SingleAgent", name: "blackbox" };
-const THEME = { preset: "trueforge", mode: "dark", brand: { name: "BlackBox" } };
+const THEME = {
+  preset: "trueforge",
+  mode: "dark",
+  brand: { name: "BlackBox" },
+  tokens: {
+    primaryBg: "#0b0a09",
+    secondaryBg: "#121110",
+    sidebarBg: "#121110",
+    topbarBg: "#0b0a09",
+    cardBg: "#181716",
+    border: "rgba(255,251,245,0.08)",
+    textPrimary: "#f4f2ee",
+    textSecondary: "#a9a49c",
+    fontFamily: "Inter, -apple-system, 'Segoe UI', sans-serif",
+    inputBoxBg: "#181716",
+    inputBorder: "rgba(255,251,245,0.14)",
+    userMessageBg: "#1f1d1b",
+    userMessageText: "#f4f2ee",
+    primaryButtonBg: "#f4f2ee",
+    primaryButtonHover: "#ffffff",
+    primaryButtonText: "#0b0a09",
+    ghostButtonHover: "#1f1d1b",
+    focusRing: "rgba(255,251,245,0.25)",
+    radius: "8px",
+    composerRadius: "12px",
+    scrollbarThumb: "rgba(255,251,245,0.14)",
+    shadowColor: "rgba(0,0,0,0.5)",
+  },
+};
 
 const Chat = memo(function Chat() {
   return <TrueForgeUI server={SERVER} layout="drawer" agentConfig={AGENT} theme={THEME} />;
@@ -63,27 +91,18 @@ function relTime(iso, now) {
   const ms = now - Date.parse(iso);
   if (Number.isNaN(ms)) return "";
   const m = Math.floor(ms / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
-  if (h < 48) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 48) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
 }
 
-const STATUS = {
-  healthy: { label: "Operational", cls: "ok" },
-  degraded: { label: "Degraded", cls: "crit" },
-};
-
-function StatusPill({ status }) {
-  const meta = STATUS[status] ?? { label: status, cls: "warn" };
-  return (
-    <span className={`pill ${meta.cls}`}>
-      <span className="dot" />
-      {meta.label}
-    </span>
-  );
+function firingOf(estate) {
+  return estate.alerts.filter((a) => a.status === "firing");
 }
+
+/* ── sidebar blocks ─────────────────────────────── */
 
 function IncidentCard({ alerts, metrics }) {
   const now = useNow(1000);
@@ -91,7 +110,8 @@ function IncidentCard({ alerts, metrics }) {
   if (firing.length === 0) {
     return (
       <div className="incident-card calm">
-        <span className="pill ok"><span className="dot" />No active incidents</span>
+        <span className="dot" />
+        No active incidents
       </div>
     );
   }
@@ -99,23 +119,22 @@ function IncidentCard({ alerts, metrics }) {
     const dur = fmtDuration(now - Date.parse(a.firedAt));
     const err = metrics?.error_rate_pct;
     return (
-      <div key={a.id} className="incident-card firing">
+      <div key={a.id} className="incident-card">
         <div className="incident-head">
-          <span className="sev-badge">{a.severity}</span>
+          <span className="live-dot" />
           <span className="incident-id">{a.id}</span>
+          <span className="sev-badge">{a.severity}</span>
           {dur && <span className="incident-timer">{dur}</span>}
         </div>
         <div className="incident-title">{a.title}</div>
-        <div className="incident-meta">
-          <span className="svc">{a.service}</span>
-        </div>
+        <div className="incident-meta">{a.service}</div>
         {err?.length > 1 && (
           <div className="incident-trend">
             <div className="trend-readout">
               <span className="trend-value">{err[err.length - 1].toFixed(1)}%</span>
               <span className="trend-label">error rate · 30m</span>
             </div>
-            <Sparkline data={err} width={110} height={30} color="--red" format={(v) => `${v}%`} />
+            <Sparkline data={err} width={104} height={32} color="--signal" format={(v) => `${v}%`} />
           </div>
         )}
       </div>
@@ -124,60 +143,43 @@ function IncidentCard({ alerts, metrics }) {
 }
 
 function ServiceRow({ svc }) {
-  const meta = STATUS[svc.status] ?? { cls: "warn" };
+  const crit = svc.status !== "healthy";
   return (
-    <div className={`service-row ${meta.cls}`}>
-      <div className="service-info">
-        <div className="service-name">{svc.name}</div>
-        <div className="service-sub">
-          <span>{svc.version}</span>
-          <span>
-            {svc.healthyReplicas}/{svc.replicas}
-            <span className="replicas">
-              {Array.from({ length: svc.replicas }, (_, i) => (
-                <i key={i} className={i < svc.healthyReplicas ? "" : "down"} />
-              ))}
-            </span>
-          </span>
-        </div>
-      </div>
-      <div className="service-status">
-        <StatusPill status={svc.status} />
-      </div>
+    <div className={`service-row ${crit ? "crit" : ""}`}>
+      <span className="sdot" />
+      <span className="service-name">{svc.name}</span>
+      <span className="service-detail">
+        {svc.version} · {svc.healthyReplicas}/{svc.replicas}
+      </span>
     </div>
   );
 }
 
-function ResourceCards({ metrics }) {
+function MemoryStat({ metrics }) {
   if (!metrics?.memory_mb?.length) return null;
   const cur = metrics.memory_mb[metrics.memory_mb.length - 1];
   const limit = metrics.memory_limit_mb;
   const pct = Math.min(100, Math.round((cur / limit) * 100));
   const oom = metrics.oom_kills?.reduce((a, b) => a + b, 0) ?? 0;
-  const sev = pct > 85 ? "crit" : pct > 60 ? "warn" : "ok";
+  const hot = pct > 85;
   return (
     <div className="metric-card">
-      <div className="metric-row">
-        <div className="metric-copy">
-          <span className="metric-label">Memory · {metrics.service}</span>
-          <span className="metric-big">
-            {(cur / 1024).toFixed(2)} <em>/ {(limit / 1024).toFixed(1)} GB</em>
-          </span>
-        </div>
+      <div className="metric-ghost">
         <Sparkline
           data={metrics.memory_mb}
-          width={110}
-          height={30}
-          color={sev === "crit" ? "--red" : sev === "warn" ? "--amber" : "--green"}
+          width={272}
+          height={44}
+          color={hot ? "--signal" : "--border-3"}
           format={(v) => `${v} MB`}
         />
       </div>
-      <div className="bar-track" role="img" aria-label={`Memory at ${pct}% of limit`}>
-        <div className={`bar-fill ${sev}`} style={{ width: `${pct}%` }} />
+      <div className="metric-label">Memory · {metrics.service}</div>
+      <div className={`metric-stat ${hot ? "hot" : ""}`}>
+        {(cur / 1024).toFixed(2)} <em>/ {(limit / 1024).toFixed(1)} GB</em>
       </div>
-      <div className="metric-foot">
-        <span className={sev === "crit" ? "crit-text" : ""}>{pct}% of limit</span>
-        <span className={oom > 0 ? "crit-text" : ""}>{oom} OOM kills · 30m</span>
+      <div className="metric-sub">
+        <span className={hot ? "hot" : ""}>{pct}% of limit</span>
+        <span className={oom > 0 ? "hot" : ""}>{oom} OOM kills · 30m</span>
       </div>
     </div>
   );
@@ -193,16 +195,14 @@ function DeployFeed({ deploys, services }) {
         const suspect = degraded && d.service === degraded.name && d.version === degraded.version;
         return (
           <div key={d.id} className={`deploy-row ${suspect ? "suspect" : ""}`}>
-            <span className="avatar" aria-hidden="true">{d.author[0].toUpperCase()}</span>
-            <div className="deploy-info">
-              <div className="deploy-line">
-                <span className="deploy-svc">{d.service}</span>
-                <span className="deploy-ver">{d.version}</span>
-                {suspect && <span className="suspect-chip">suspect</span>}
-              </div>
-              <div className="deploy-sub">
-                {d.summary} · {d.author} · {relTime(d.deployedAt, now)}
-              </div>
+            <div className="deploy-l1">
+              <span className="deploy-svc">{d.service}</span>
+              <span className="deploy-ver">{d.version}</span>
+              {suspect && <span className="suspect-tag">suspect</span>}
+              <span className="deploy-time">{relTime(d.deployedAt, now)}</span>
+            </div>
+            <div className="deploy-l2">
+              {d.summary} · {d.author}
             </div>
           </div>
         );
@@ -213,34 +213,35 @@ function DeployFeed({ deploys, services }) {
 
 function Sidebar() {
   const estate = useEstate();
-  const firingCount = estate.alerts.filter((a) => a.status === "firing").length;
+  const firingCount = firingOf(estate).length;
 
   useEffect(() => {
     document.title = firingCount > 0 ? `(${firingCount}) BlackBox — Incident` : "BlackBox";
+    document.documentElement.dataset.status = firingCount > 0 ? "incident" : "calm";
   }, [firingCount]);
 
   if (!estate.loaded && !estate.error) {
     return (
       <aside className="sidebar">
-        <div className="skeleton" style={{ height: 92 }} />
+        <div className="skeleton" style={{ height: 120 }} />
         <div className="skeleton" style={{ height: 128 }} />
-        <div className="skeleton" style={{ height: 90 }} />
+        <div className="skeleton" style={{ height: 96 }} />
       </aside>
     );
   }
 
   return (
     <aside className="sidebar">
-      <div className="section" style={{ "--i": 0 }}>
+      <div className="section">
         <div className="section-title">
-          Incidents
-          {estate.error && <span className="link-state" style={{ color: "var(--red)" }}>telemetry offline</span>}
+          Incident
+          {estate.error && <span style={{ color: "var(--signal)", textTransform: "none", letterSpacing: 0 }}>telemetry offline</span>}
         </div>
         <IncidentCard alerts={estate.alerts} metrics={estate.metrics} />
       </div>
 
-      <div className="section" style={{ "--i": 1 }}>
-        <div className="section-title">Services</div>
+      <div className="section">
+        <div className="section-title">Services · {estate.services.length}</div>
         <div className="service-list">
           {estate.services.map((s) => (
             <ServiceRow key={s.name} svc={s} />
@@ -249,19 +250,19 @@ function Sidebar() {
       </div>
 
       {estate.metrics && (
-        <div className="section" style={{ "--i": 2 }}>
+        <div className="section">
           <div className="section-title">Resources</div>
-          <ResourceCards metrics={estate.metrics} />
+          <MemoryStat metrics={estate.metrics} />
         </div>
       )}
 
-      <div className="section" style={{ "--i": 3 }}>
-        <div className="section-title">Recent deploys</div>
+      <div className="section">
+        <div className="section-title">Deploys</div>
         <DeployFeed deploys={estate.deploys} services={estate.services} />
       </div>
 
       <div className="sidebar-footer">
-        <span className="live-indicator"><span className="live-dot" />incident-mcp</span>
+        <span>incident-mcp · live</span>
         <span className="env-chip">demo</span>
       </div>
     </aside>
@@ -270,17 +271,109 @@ function Sidebar() {
 
 function TopStatus() {
   const estate = useEstate(5000);
-  const firing = estate.alerts.filter((a) => a.status === "firing").length;
-  return firing > 0 ? (
-    <span className="pill crit"><span className="dot" />{firing} active incident{firing > 1 ? "s" : ""}</span>
-  ) : (
-    <span className="pill ok"><span className="dot" />All systems operational</span>
+  const firing = firingOf(estate).length;
+  return (
+    <span className="top-status">
+      <span className="dot" />
+      {firing > 0 ? `${firing} active incident${firing > 1 ? "s" : ""}` : "All systems operational"}
+    </span>
+  );
+}
+
+/* ── incident briefing overlay (replaces SDK's default empty state) ── */
+
+function useThreadEmpty() {
+  const [empty, setEmpty] = useState(true);
+  useEffect(() => {
+    const check = () =>
+      setEmpty(!!document.querySelector(".chat .aui-thread-welcome-root"));
+    check();
+    const t = setInterval(check, 700);
+    return () => clearInterval(t);
+  }, []);
+  return empty;
+}
+
+function prefillComposer(text) {
+  const ta = document.querySelector(".chat textarea");
+  if (!ta) return;
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
+  setter.call(ta, text);
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  ta.focus();
+}
+
+function WelcomeOverlay() {
+  const estate = useEstate(5000);
+  const now = useNow(1000);
+  const empty = useThreadEmpty();
+  if (!empty || !estate.loaded) return null;
+
+  const firing = firingOf(estate)[0];
+  const degraded = estate.services.find((s) => s.status !== "healthy");
+  const suspect = degraded
+    ? estate.deploys.find((d) => d.service === degraded.name && d.version === degraded.version)
+    : null;
+
+  const chips = firing
+    ? [
+        { g: "▸", t: "We just got paged. Investigate the active alert." },
+        { g: "≡", t: `Summarize the last 30 minutes of ${firing.service} logs.` },
+        ...(suspect ? [{ g: "⌥", t: `Correlate the errors with deploy ${suspect.version}.` }] : []),
+        { g: "✎", t: "Draft a status-page update for this incident." },
+      ]
+    : [
+        { g: "▸", t: "Give me a health summary of the estate." },
+        { g: "≡", t: "Any anomalies in the last 30 minutes of logs?" },
+        { g: "⌥", t: "List recent deploys and their risk." },
+        { g: "✎", t: "Walk me through the incident runbook." },
+      ];
+
+  const dur = firing ? fmtDuration(now - Date.parse(firing.firedAt)) : null;
+
+  return (
+    <div className="welcome">
+      <div className="welcome-inner">
+        <div className="welcome-context">
+          {firing ? (
+            <>
+              <span className="live-dot" />
+              {firing.id} · {firing.severity} · {dur}
+            </>
+          ) : (
+            <>monitoring · all clear</>
+          )}
+        </div>
+        <div className="welcome-greeting">
+          {firing ? (
+            <>
+              <span className="fail">{firing.service}</span> is failing. Where do we start?
+            </>
+          ) : (
+            <>All clear. What do you want to look at?</>
+          )}
+        </div>
+        <div className="chips">
+          {chips.slice(0, 4).map((c) => (
+            <button key={c.t} className="chip" onClick={() => prefillComposer(c.t)}>
+              <span className="glyph">{c.g}</span>
+              {c.t}
+            </button>
+          ))}
+        </div>
+        <div className="welcome-hint">
+          <span><span className="kbd">⏎</span> send</span>
+          <span><span className="kbd">⇧⏎</span> newline</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function App() {
   return (
     <div className="shell">
+      <div className="ribbon" />
       <header className="topbar">
         <div className="topbar-left">
           <div className="logo-mark">B</div>
@@ -298,6 +391,7 @@ export default function App() {
         <Sidebar />
         <section className="chat">
           <Chat />
+          <WelcomeOverlay />
         </section>
       </div>
     </div>
