@@ -317,16 +317,16 @@ function WelcomeOverlay() {
 
   const chips = firing
     ? [
-        { g: "▸", t: "We just got paged. Investigate the active alert." },
-        { g: "≡", t: `Summarize the last 30 minutes of ${firing.service} logs.` },
-        ...(suspect ? [{ g: "⌥", t: `Correlate the errors with deploy ${suspect.version}.` }] : []),
-        { g: "✎", t: "Draft a status-page update for this incident." },
+        "We just got paged. Investigate the active alert.",
+        `Summarize the last 30 minutes of ${firing.service} logs.`,
+        ...(suspect ? [`Correlate the errors with deploy ${suspect.version}.`] : []),
+        "Draft a status-page update for this incident.",
       ]
     : [
-        { g: "▸", t: "Give me a health summary of the estate." },
-        { g: "≡", t: "Any anomalies in the last 30 minutes of logs?" },
-        { g: "⌥", t: "List recent deploys and their risk." },
-        { g: "✎", t: "Walk me through the incident runbook." },
+        "Give me a health summary of the estate.",
+        "Any anomalies in the last 30 minutes of logs?",
+        "List recent deploys and their risk.",
+        "Walk me through the incident runbook.",
       ];
 
   const dur = firing ? fmtDuration(now - Date.parse(firing.firedAt)) : null;
@@ -347,23 +347,25 @@ function WelcomeOverlay() {
         <div className="welcome-greeting">
           {firing ? (
             <>
-              <span className="fail">{firing.service}</span> is failing. Where do we start?
+              <span className="fail">{firing.service}</span> is failing.{" "}
+              <span className="ask">Where do we start?</span>
             </>
           ) : (
-            <>All clear. What do you want to look at?</>
+            <>
+              All clear. <span className="ask">What do you want to look at?</span>
+            </>
           )}
         </div>
         <div className="chips">
           {chips.slice(0, 4).map((c) => (
-            <button key={c.t} className="chip" onClick={() => prefillComposer(c.t)}>
-              <span className="glyph">{c.g}</span>
-              {c.t}
+            <button key={c} className="chip" onClick={() => prefillComposer(c)}>
+              {c}
             </button>
           ))}
         </div>
         <div className="welcome-hint">
-          <span><span className="kbd">⏎</span> send</span>
-          <span><span className="kbd">⇧⏎</span> newline</span>
+          <span><span className="kbd">Enter</span> send</span>
+          <span><span className="kbd">Shift + Enter</span> newline</span>
         </div>
       </div>
     </div>

@@ -1,26 +1,41 @@
 # Demo Script (target: 3:00)
 
-Judges must see: real tools via MCP, code executing in the sandbox, and the approval
-gate moment. Persistence and subagents are bonus beats.
+Judges must witness, explicitly: the agent reaching real tools, code executing in
+the sandbox, and "the moment it stops and asks" for approval. Film against
+**Mission Control** (http://localhost:5199) — the Best UI track judges the demo
+video and the running project.
+
+## Pre-flight (before recording)
+
+- Restart `incident-mcp` so ALERT-4821 is firing fresh.
+- TrueForge running; agent provisioned with your model key (`scripts/setup-trueforge.mjs`).
+- Sandbox working (Daytona key recommended) — the sandbox beat is a hard judging
+  requirement.
+- Clean browser profile, no bookmarks/extensions, no keys anywhere on screen.
+- Mission Control open; incident briefing visible ("checkout-service is failing.
+  Where do we start?").
 
 | Time | Beat | On screen |
 |---|---|---|
-| 0:00–0:20 | Hook | "This is BlackBox. It has a license to investigate production — but not to act." Show the firing P1 alert in chat: *"We just got paged. Investigate."* |
-| 0:20–0:50 | Subagent fan-out | TrueForge UI showing three subagents running in parallel (logs / metrics / deploys). Narrate what each is fetching over MCP. |
-| 0:50–1:20 | **Sandbox** | Logs analyst writes a Python script in the sandbox, runs it, prints error-signature counts. Zoom on the output: `PricingCache allocation failed — 61%` |
-| 1:20–1:45 | Root cause | Agent's synthesis: v2.4.1 deploy at 09:31 → memory inflection 09:35 → OOM kills. Root cause: unbounded cache. |
-| 1:45–2:20 | **THE GATE** | Agent proposes `rollback_deploy(checkout-service, v2.4.0)`. TrueForge pauses. Hold the shot. Click **Approve**. Rollback executes, alert auto-resolves. |
-| 2:20–2:40 | Persistence beat | (Pre-recorded or live) kill the TrueForge process mid-investigation earlier, restart, session resumes. One sentence. |
-| 2:40–3:00 | Close | Incident summary message; "Everything you saw — tools, sandbox, subagents, the approval gate — is the TrueForge harness. Repo is public, runs with zero cloud accounts." |
+| 0:00–0:15 | Hook | Mission Control in incident state: white-hot incident card, ticking timer, error sparkline, ribbon sweeping. "This is BlackBox. It can investigate production — it cannot act without a human." |
+| 0:15–0:30 | The briefing | Click the suggestion chip **"We just got paged. Investigate the active alert."** → send. Point out the suspect flag already sitting on deploy v2.4.1 in the sidebar. |
+| 0:30–1:10 | Real tools | Agent steps stream: runbook skill loads, MCP tool calls fan out (alerts, status, metrics, deploys, logs). Narrate: "every one of these is a real MCP call into the estate." |
+| 1:10–1:40 | **Sandbox** | The log-analysis step: agent writes and runs code in the TrueForge sandbox to count error signatures. Zoom the output (dominant signature + rate). |
+| 1:40–2:00 | Root cause | The consolidated report: deploy 09:31 → memory ramp → OOM kills → 34% errors. Root cause: unbounded cache in v2.4.1. |
+| 2:00–2:35 | **THE GATE** | Agent proposes rollback; harness freezes `rollback_deploy` behind **Allow / Deny**. Hold the shot — say "this is the license to act, and it's mine." Click **Allow**. |
+| 2:35–2:50 | Resolution | The entire console drains from white-hot to quiet gray: ribbon stills, timer vanishes, services read Operational, alert resolves. This visual is the payoff — let it breathe. |
+| 2:50–3:00 | Close | "MCP tools, sandbox, subagents, approval gates, session persistence — all TrueForge. Repo is public and runs with one free API key." |
 
 ## Recording rules
 
-- Clean browser profile, no bookmarks/extensions visible, no API keys on screen.
-- Pre-warm: model configured, connector attached, chat open. Start recording at the prompt.
-- If over time, cut the persistence beat first (mention it verbally instead).
+- Judges must SEE: real tools ✓ sandbox code ✓ the approval pause ✓ — all three or
+  the demo fails its brief.
+- If over time: cut narration, never the gate or the sandbox beat.
+- Session persistence (optional beat, verbal): "we killed the server mid-investigation
+  earlier — the session survived."
 
 ## Optional extra beat (if under time)
 
-Before the rollback, have the agent propose `restart_service` first and **reject** it —
-agent explains a restart won't fix a bad deploy and pivots to rollback. Proves the gate
-is a real decision point, not theater.
+Have the agent propose `restart_service` first and **Deny** it — the agent explains a
+restart won't fix a bad deploy and pivots to rollback. Proves the gate is a decision,
+not theater.
