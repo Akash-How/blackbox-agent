@@ -31,8 +31,14 @@ policy pauses on destructive tools, and the agent manifest additionally pins the
 
 ## Quickstart
 
-Prerequisites: Node 20+, one LLM API key (Anthropic / OpenAI / Gemini), and a free
-[Daytona](https://www.daytona.io) API key for the sandbox.
+Prerequisites: Node 20+, one LLM API key (Anthropic / OpenAI / Gemini), and a sandbox:
+either a free [Daytona](https://www.daytona.io) API key, or on Linux/macOS the local
+fallback (`bwrap`, `socat`, `rg` on PATH — e.g. `sudo apt install bubblewrap socat ripgrep`).
+
+> **Windows:** TrueForge v0.1.4 crashes at startup on native Windows (ESM loader path
+> bug) and its local sandbox is Linux/macOS-only. Run TrueForge (and ideally
+> incident-mcp) inside WSL — everything below works unchanged there, and the UI is
+> still reachable from your Windows browser at http://localhost:8790.
 
 ```bash
 # 1. Install and test the mock-infra MCP server
@@ -52,17 +58,18 @@ npx @truefoundry/trueforge
 ```bash
 # 4. In a third terminal: provision everything in one shot
 export ANTHROPIC_API_KEY=sk-...        # or OPENAI_API_KEY / GEMINI_API_KEY
+export DAYTONA_API_KEY=dtn_...         # optional if the Linux local sandbox is available
 export SKILL_REPO_URL=https://github.com/<you>/<this-repo>   # optional, enables the skill
 node scripts/setup-trueforge.mjs
 ```
 
-The script registers the model provider, the `incident-mcp` connector, the git-backed
-`incident-runbook` skill, and the `blackbox` agent (approval gates, sandbox, subagents,
-temperature 0.2). It's idempotent — rerun it any time.
+The script registers the model provider, the `incident-mcp` connector, the Daytona
+sandbox provider (when a key is given), the git-backed `incident-runbook` skill, and
+the `blackbox` agent (approval gates, sandbox, subagents, temperature 0.2). It is
+idempotent — rerun it any time, e.g. after enabling a sandbox, and it upgrades the
+agent in place.
 
-5. In TrueForge **Settings → Sandbox providers**, add your Daytona API key
-   (the only manual step; required for sandbox code execution and skills).
-6. Open http://localhost:8790, pick the **blackbox** agent, and say:
+5. Open http://localhost:8790, pick the **blackbox** agent, and say:
 
 > We just got paged. Investigate the active alert.
 

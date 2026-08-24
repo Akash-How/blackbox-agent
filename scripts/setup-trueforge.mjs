@@ -22,16 +22,16 @@ const SKILL_REF = process.env.SKILL_REPO_REF ?? "main";
 
 const PROVIDERS = [
   {
-    env: "ANTHROPIC_API_KEY", type: "anthropic", name: "anthropic",
-    model: { model_id: "claude-sonnet-4-6", name: "claude-sonnet-4-6" },
+    env: "ANTHROPIC_API_KEY", type: "anthropic",
+    model: { model_id: "claude-sonnet-4-6", name: "claude-sonnet-4-6", properties: { context_length: 200000, max_output_tokens: 64000 } },
   },
   {
-    env: "OPENAI_API_KEY", type: "openai", name: "openai",
-    model: { model_id: "gpt-5.2", name: "gpt-5.2" },
+    env: "OPENAI_API_KEY", type: "openai",
+    model: { model_id: "gpt-5.2", name: "gpt-5.2", properties: { context_length: 272000, max_output_tokens: 128000 } },
   },
   {
-    env: "GEMINI_API_KEY", type: "google-gemini", name: "google-gemini",
-    model: { model_id: "gemini-3-pro", name: "gemini-3-pro" },
+    env: "GEMINI_API_KEY", type: "google-gemini",
+    model: { model_id: "gemini-3-pro", name: "gemini-3-pro", properties: { context_length: 1000000, max_output_tokens: 64000 } },
   },
 ];
 
@@ -77,11 +77,10 @@ if (!provider) {
   process.exit(1);
 }
 report(
-  `model provider "${provider.name}" (${provider.model.model_id})`,
-  await api("POST", "/model-providers", {
+  `model provider "${provider.type}" (${provider.model.model_id})`,
+  await api("PUT", "/settings/model-providers", {
     manifest: {
       type: provider.type,
-      name: provider.name,
       auth: { api_key: process.env[provider.env] },
       models: [provider.model],
     },
@@ -91,7 +90,7 @@ report(
 // 2. incident-mcp connector
 report(
   `MCP server "incident-mcp" at ${MCP_URL}`,
-  await api("POST", "/mcp-servers", {
+  await api("PUT", "/settings/mcp-servers", {
     manifest: {
       type: "remote",
       name: "incident-mcp",
@@ -104,12 +103,38 @@ report(
   })
 );
 
-// 3. incident-runbook skill (git-backed — needs the public repo URL)
+// 3. Sandbox — configure Daytona if a key was given, then check what the server reports.
+if (process.env.DAYTONA_API_KEY) {
+  report(
+    `sandbox provider "daytona"`,
+    await api("PUT", "/settings/sandbox-providers", {
+      manifest: {
+        type: "daytona",
+        auth: { api_key: process.env.DAYTONA_API_KEY },
+        exec_timeout_ms: 60000,
+        auto_stop_interval_in_minutes: 5,
+        auto_archive_interval_in_minutes: 60,
+        auto_delete_interval_in_minutes: 7200,
+      },
+    })
+  );
+}
+const capabilities = (await api("GET", "/capabilities")).data?.data ?? {};
+const sandboxEnabled = capabilities.sandbox?.enabled === true;
+if (!sandboxEnabled) {
+  console.log(
+    "  ! no sandbox available — creating the agent with sandbox and skills disabled.\n" +
+      "    Enable one (DAYTONA_API_KEY, or install bwrap/socat/rg on Linux and restart\n" +
+      "    TrueForge), then rerun this script to upgrade the agent."
+  );
+}
+
+// 4. incident-runbook skill (git-backed — needs the public repo URL and a sandbox)
 let skillConfigured = false;
-if (SKILL_REPO) {
+if (SKILL_REPO && sandboxEnabled) {
   skillConfigured = report(
     `skill "incident-runbook" from ${SKILL_REPO}@${SKILL_REF}`,
-    await api("POST", "/skills", {
+    await api("PUT", "/settings/skills", {
       manifest: {
         type: "git",
         name: "incident-runbook",
@@ -121,45 +146,53 @@ if (SKILL_REPO) {
     })
   );
 } else {
-  console.log("  – skill skipped (set SKILL_REPO_URL to your public repo to enable it)");
+  console.log(
+    `  – skill skipped (${SKILL_REPO ? "needs a sandbox" : "set SKILL_REPO_URL to your public repo"})`
+  );
 }
 
-// 4. The BlackBox agent
-report(
-  `agent "blackbox"`,
-  await api("POST", "/agents", {
-    name: "blackbox",
-    manifest: {
-      model: {
-        name: `${provider.name}/${provider.model.model_id}`,
-        params: { temperature: 0.2 },
-      },
-      instructions,
-      mcp_servers: [
-        {
-          name: "incident-mcp",
-          enable_tools: ["@all"],
-          // Belt and braces: the harness already gates destructive-annotated tools;
-          // we also pin them by name so the policy survives annotation changes.
-          require_approval_for_tools: ["rollback_deploy", "restart_service"],
-        },
-      ],
-      ...(skillConfigured ? { skills: [{ name: "incident-runbook" }] } : {}),
-      config: {
-        sandbox: { enabled: true },
-        dynamic_sub_agents: { enabled: true },
-        ask_user_questions: { enabled: true },
-        iteration_limit: 60,
-      },
+// 4. The BlackBox agent (upsert: replace by id if the name is already taken)
+const agentManifest = {
+  model: {
+    name: `${provider.type}/${provider.model.name}`,
+    params: { temperature: 0.2 },
+  },
+  instructions,
+  mcp_servers: [
+    {
+      name: "incident-mcp",
+      enable_tools: ["@all"],
+      // Belt and braces: the harness already gates destructive-annotated tools;
+      // we also pin them by name so the policy survives annotation changes.
+      require_approval_for_tools: ["rollback_deploy", "restart_service"],
     },
-  })
+  ],
+  ...(skillConfigured ? { skills: [{ name: "incident-runbook" }] } : {}),
+  config: {
+    sandbox: { enabled: sandboxEnabled },
+    dynamic_sub_agents: { enabled: true },
+    ask_user_questions: { enabled: true },
+    iteration_limit: 60,
+  },
+};
+
+const agents = (await api("GET", "/agents")).data;
+const existing = (Array.isArray(agents) ? agents : agents?.data ?? []).find?.(
+  (a) => a.name === "blackbox"
+);
+report(
+  existing ? `agent "blackbox" (updated)` : `agent "blackbox" (created)`,
+  existing
+    ? await api("PUT", `/agents/${existing.id}`, { manifest: agentManifest })
+    : await api("POST", "/agents", { name: "blackbox", manifest: agentManifest })
 );
 
 console.log(`
 Done. Next:
   1. Ensure incident-mcp is running:   cd mcp/incident-mcp && npm start
-  2. Sandbox: in TrueForge Settings → Sandbox providers, add your Daytona API key
-     (required for the sandbox log-analysis step and for skills).
+  2. Sandbox (needed for the log-analysis step and skills), either:
+     - Linux/macOS local fallback: install bwrap, socat, rg and restart TrueForge, or
+     - Daytona: add your API key in Settings → Sandbox providers.
   3. Open ${BASE}, pick the "blackbox" agent, and say:
      "We just got paged. Investigate the active alert."
 `);
