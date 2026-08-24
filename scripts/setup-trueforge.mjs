@@ -6,7 +6,8 @@
 // Usage:  node scripts/setup-trueforge.mjs
 // Env:
 //   TRUEFORGE_BASE_URL   default http://localhost:8790
-//   ANTHROPIC_API_KEY | OPENAI_API_KEY | GEMINI_API_KEY   (first one found wins)
+//   OPENCODE_API_KEY | ANTHROPIC_API_KEY | OPENAI_API_KEY | GEMINI_API_KEY
+//     (first one found wins; OPENCODE_API_KEY uses the free "Ox Alpha" stealth model)
 //   INCIDENT_MCP_URL     default http://localhost:8791/mcp
 //   MCP_AUTH_TOKEN       optional bearer token if incident-mcp runs with auth
 //   SKILL_REPO_URL       public git repo containing this project (enables the skill)
@@ -21,6 +22,12 @@ const SKILL_REPO = process.env.SKILL_REPO_URL;
 const SKILL_REF = process.env.SKILL_REPO_REF ?? "main";
 
 const PROVIDERS = [
+  {
+    // OpenCode Zen gateway — "Ox Alpha" stealth model, free for a limited time.
+    env: "OPENCODE_API_KEY", type: "custom", name: "opencode",
+    base_url: "https://opencode.ai/zen/v1",
+    model: { model_id: "x-preview-f-free", name: "ox-alpha", properties: {} },
+  },
   {
     env: "ANTHROPIC_API_KEY", type: "anthropic",
     model: { model_id: "claude-sonnet-4-6", name: "claude-sonnet-4-6", properties: { context_length: 200000, max_output_tokens: 64000 } },
@@ -76,11 +83,13 @@ if (!provider) {
   console.error(`No model API key found. Set one of: ${PROVIDERS.map((p) => p.env).join(", ")}`);
   process.exit(1);
 }
+const providerName = provider.name ?? provider.type;
 report(
-  `model provider "${provider.type}" (${provider.model.model_id})`,
+  `model provider "${providerName}" (${provider.model.model_id})`,
   await api("PUT", "/settings/model-providers", {
     manifest: {
       type: provider.type,
+      ...(provider.type === "custom" ? { name: provider.name, base_url: provider.base_url } : {}),
       auth: { api_key: process.env[provider.env] },
       models: [provider.model],
     },
@@ -154,7 +163,7 @@ if (SKILL_REPO && sandboxEnabled) {
 // 4. The BlackBox agent (upsert: replace by id if the name is already taken)
 const agentManifest = {
   model: {
-    name: `${provider.type}/${provider.model.name}`,
+    name: `${providerName}/${provider.model.name}`,
     params: { temperature: 0.2 },
   },
   instructions,
