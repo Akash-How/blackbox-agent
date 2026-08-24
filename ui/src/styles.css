@@ -28,7 +28,9 @@ body {
   font-family: var(--sans);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
+  /* clip, not hidden: hidden still allows programmatic scrolling (the chat
+     SDK scrollIntoView's its composer and drags the document sideways). */
+  overflow: clip;
 }
 
 .shell { display: flex; flex-direction: column; height: 100dvh; }
@@ -78,7 +80,7 @@ body {
 @keyframes pulse { 50% { opacity: 0.35; } }
 
 /* ── layout ──────────────────────────────────────── */
-.main { display: flex; flex: 1; min-height: 0; }
+.main { display: flex; flex: 1; min-height: 0; overflow: clip; }
 .sidebar {
   width: 304px; min-width: 304px;
   border-right: 1px solid var(--border);
@@ -88,7 +90,7 @@ body {
   display: flex; flex-direction: column; gap: 20px;
   scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
 }
-.chat { flex: 1; min-width: 0; background: var(--surface); }
+.chat { flex: 1; min-width: 0; background: var(--surface); overflow: clip; }
 .chat > * { height: 100%; }
 
 .section {
@@ -288,6 +290,10 @@ body {
   padding: 1px 6px; color: var(--text-muted);
 }
 
+@media (max-width: 1100px) {
+  .sidebar { width: 260px; min-width: 260px; }
+  .deploy-sub { max-width: 185px; }
+}
 @media (max-width: 860px) {
   .sidebar { display: none; }
 }
