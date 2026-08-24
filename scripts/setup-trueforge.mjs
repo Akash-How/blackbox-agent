@@ -187,12 +187,17 @@ report(
     : await api("POST", "/agents", { name: "blackbox", manifest: agentManifest })
 );
 
+const sandboxHint = sandboxEnabled
+  ? ""
+  : `
+  - Sandbox is OFF (needed for the log-analysis step and skills). Either:
+      Linux/macOS local fallback: install bwrap, socat, rg and restart TrueForge, or
+      Daytona: rerun with DAYTONA_API_KEY set.
+    Then rerun this script to upgrade the agent.`;
+
 console.log(`
-Done. Next:
-  1. Ensure incident-mcp is running:   cd mcp/incident-mcp && npm start
-  2. Sandbox (needed for the log-analysis step and skills), either:
-     - Linux/macOS local fallback: install bwrap, socat, rg and restart TrueForge, or
-     - Daytona: add your API key in Settings → Sandbox providers.
-  3. Open ${BASE}, pick the "blackbox" agent, and say:
-     "We just got paged. Investigate the active alert."
+Done. Next:${sandboxHint}
+  - Ensure incident-mcp is running:   cd mcp/incident-mcp && npm start
+  - Open ${BASE}, pick the "blackbox" agent, and say:
+    "We just got paged. Investigate the active alert."
 `);
