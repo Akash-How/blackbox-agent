@@ -260,13 +260,12 @@ html[data-status="incident"] .top-status .dot {
 .deploy-row {
   display: flex; flex-direction: column; gap: 3px; justify-content: center;
   min-height: 46px; padding: 7px 10px; margin: 0 -10px;
-  border-radius: 6px; border-left: 2px solid transparent;
+  border-radius: 6px;
   transition: background 0.15s var(--ease);
 }
 .deploy-row:hover { background: var(--bg-2); transition-duration: 0.06s; }
 .deploy-row + .deploy-row { border-top: 1px solid var(--border-1); }
 .deploy-row.suspect {
-  border-left-color: var(--signal);
   background: var(--signal-fill);
   animation: suspect-flash 1.2s var(--ease);
 }
@@ -353,6 +352,27 @@ html[data-status="incident"] .top-status .dot {
   border-color: var(--border-2) !important;
   color: var(--text-1) !important;
   transition-duration: 0.06s;
+}
+
+/* composer attach: ghost icon, no chrome until hover */
+.chat button[aria-label="Attach"],
+.chat button[aria-label="Attach a file"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--text-3) !important;
+  border-radius: 6px !important;
+  transition: color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.chat button[aria-label="Attach"]:hover,
+.chat button[aria-label="Attach a file"]:hover {
+  background: var(--bg-3) !important;
+  color: var(--text-1) !important;
+  transition-duration: 0.06s;
+}
+.chat button[aria-label="Attach"] svg,
+.chat button[aria-label="Attach a file"] svg {
+  width: 15px; height: 15px;
 }
 
 /* ── incident briefing overlay (empty-thread state) ── */
