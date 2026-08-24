@@ -1,0 +1,162 @@
+:root {
+  --bg: #07090b;
+  --bg-raise: #0c1013;
+  --bg-tile: #0f1417;
+  --line: #1c2429;
+  --ink: #d7e2dd;
+  --ink-dim: #6d7d78;
+  --phosphor: #37e08c;
+  --phosphor-glow: rgba(55, 224, 140, 0.35);
+  --amber: #f5b83d;
+  --red: #ff5c5c;
+  --red-glow: rgba(255, 92, 92, 0.4);
+  --mono: "Cascadia Code", "JetBrains Mono", Consolas, "SF Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  overflow: hidden;
+}
+
+/* faint scanlines over the whole app */
+.shell::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+  z-index: 40;
+}
+
+.shell { display: flex; flex-direction: column; height: 100dvh; }
+
+/* ── top bar ─────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raise);
+}
+.wordmark { font-size: 15px; letter-spacing: 3px; font-weight: 700; }
+.wm-block { color: var(--phosphor); text-shadow: 0 0 12px var(--phosphor-glow); }
+.wm-sub { color: var(--ink-dim); font-weight: 400; letter-spacing: 2px; font-size: 12px; }
+.topbar-right { display: flex; gap: 18px; align-items: center; font-size: 12px; }
+.clock { color: var(--ink-dim); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.defcon { letter-spacing: 1.5px; font-weight: 700; padding: 3px 10px; border-radius: 3px; }
+.defcon.ok { color: var(--phosphor); border: 1px solid rgba(55,224,140,.35); }
+.defcon.crit {
+  color: var(--red); border: 1px solid rgba(255,92,92,.5);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+@keyframes breathe { 50% { box-shadow: 0 0 14px var(--red-glow); } }
+
+/* ── layout ──────────────────────────────────────── */
+.main { display: flex; flex: 1; min-height: 0; }
+.estate {
+  width: 320px; min-width: 320px;
+  border-right: 1px solid var(--line);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+  background:
+    radial-gradient(1200px 400px at -20% -10%, rgba(55,224,140,0.05), transparent 60%),
+    var(--bg);
+}
+.chat { flex: 1; min-width: 0; background: var(--bg-raise); }
+.chat > * { height: 100%; }
+
+.panel-label {
+  font-size: 10px; letter-spacing: 3px; color: var(--ink-dim);
+  display: flex; align-items: center; gap: 8px;
+}
+.scan {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--line), transparent);
+  position: relative; overflow: hidden;
+}
+.scan::after {
+  content: ""; position: absolute; top: 0; left: -30%;
+  width: 30%; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--phosphor));
+  animation: sweep 3s linear infinite;
+}
+@keyframes sweep { to { left: 105%; } }
+
+/* ── alert banner ────────────────────────────────── */
+.alert-banner {
+  border-radius: 6px; padding: 10px 12px; font-size: 12px;
+  border: 1px solid var(--line); background: var(--bg-tile);
+}
+.alert-banner.calm { color: var(--ink-dim); display: flex; align-items: center; gap: 8px; }
+.alert-banner.firing {
+  border-color: rgba(255,92,92,.55);
+  background: linear-gradient(180deg, rgba(255,92,92,.09), rgba(255,92,92,.03));
+  animation: breathe 1.6s ease-in-out infinite;
+}
+.alert-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.sev {
+  background: var(--red); color: #14090b; font-weight: 800; font-size: 10px;
+  padding: 1px 7px; border-radius: 3px; letter-spacing: 1px;
+}
+.alert-id { color: var(--ink-dim); font-size: 10px; letter-spacing: 1px; }
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+  margin-left: auto; animation: ping 1.2s ease-out infinite;
+}
+@keyframes ping { 0% { box-shadow: 0 0 0 0 var(--red-glow); } 100% { box-shadow: 0 0 0 9px transparent; } }
+.alert-title { font-weight: 700; line-height: 1.35; }
+.alert-svc { color: var(--amber); font-size: 11px; margin-top: 4px; }
+
+/* ── service tiles ───────────────────────────────── */
+.tile {
+  border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg-tile); padding: 10px 12px;
+  transition: border-color .3s;
+}
+.tile.crit { border-color: rgba(255,92,92,.45); }
+.tile-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tile-name { font-size: 12.5px; font-weight: 700; letter-spacing: .5px; }
+.tile-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-top: 4px; }
+.tile-row.dim { color: var(--ink-dim); }
+.tile-ver { color: var(--ink-dim); }
+.status-chip { font-weight: 700; letter-spacing: 1px; font-size: 10px; }
+.status-chip.ok { color: var(--phosphor); }
+.status-chip.crit { color: var(--red); }
+.status-chip.warn { color: var(--amber); }
+
+.led { width: 9px; height: 9px; border-radius: 50%; }
+.led.ok { background: var(--phosphor); box-shadow: 0 0 8px var(--phosphor-glow); }
+.led.crit { background: var(--red); box-shadow: 0 0 8px var(--red-glow); animation: ping 1.2s ease-out infinite; }
+.led.warn { background: var(--amber); }
+
+.replica-dots { display: inline-flex; gap: 3px; margin-left: 8px; }
+.rdot { width: 7px; height: 7px; border-radius: 2px; }
+.rdot.up { background: var(--phosphor); opacity: .9; }
+.rdot.down { background: var(--red); opacity: .8; }
+
+/* ── memory gauge ────────────────────────────────── */
+.gauge-box { border: 1px solid var(--line); border-radius: 6px; background: var(--bg-tile); padding: 10px 12px; }
+.gauge-title { font-size: 10.5px; letter-spacing: 1px; margin-bottom: 8px; font-weight: 700; }
+.gauge-track { height: 10px; border-radius: 4px; background: #131a1e; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 4px 0 0 4px; transition: width .8s ease; }
+.gauge-fill.ok { background: var(--phosphor); }
+.gauge-fill.warn { background: var(--amber); }
+.gauge-fill.crit { background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
+.gauge-foot { display: flex; justify-content: space-between; font-size: 10.5px; margin-top: 6px; }
+
+.dim { color: var(--ink-dim); }
+.crit-text { color: var(--red); font-weight: 700; }
+
+.footer-note {
+  margin-top: auto; padding-top: 10px;
+  color: var(--ink-dim); font-size: 10.5px; letter-spacing: 2px;
+}
+.cursor { animation: blink 1.1s steps(1) infinite; color: var(--phosphor); }
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (max-width: 860px) {
+  .estate { display: none; }
+}

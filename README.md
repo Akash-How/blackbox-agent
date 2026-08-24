@@ -84,6 +84,29 @@ and stop dead at the rollback, waiting for your **Allow**.
 - `GET /healthz` for liveness checks.
 - `npm run start:stdio` runs the stdio transport for MCP Inspector debugging.
 
+## Mission Control (custom UI)
+
+`ui/` is a custom operations console built on the TrueForge UI SDK — a spy-ops
+"mission control" around the agent chat:
+
+- **Live estate telemetry** (left panel): the UI polls `incident-mcp` directly, so
+  you watch the alert fire, replicas drop, and memory climb in real time — and see
+  them recover the moment you approve the agent's rollback.
+- **Pinned agent chat** (center): the `blackbox` agent with streaming, tool calls,
+  and the native approval gate, in a phosphor-on-black theme with a live incident
+  status bar and dynamic tab title.
+
+```bash
+cd ui
+npm ci
+npm run build
+npm run preview   # http://localhost:5199 (proxies /api → :8790, /mcp → :8791)
+```
+
+Note: `ui/package.json` pins `@assistant-ui/*` (notably `tap@0.9.5`) to the exact
+versions in TrueForge's own lockfile — newer in-range versions of `tap` loop with
+`trueforge-ui@0.2.4` ("maximum update depth exceeded").
+
 ## Repo layout
 
 ```
