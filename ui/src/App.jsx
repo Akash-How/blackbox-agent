@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { TrueForgeUI } from "@truefoundry/trueforge-ui";
-import { fetchEstate } from "./estate.js";
+import { estateSnapshot, subscribeEstate } from "./estate.js";
 import Sparkline from "./Sparkline.jsx";
 
 // Module-level constants: TrueForgeUI must never see a new prop identity, or its
@@ -41,25 +41,11 @@ const Chat = memo(function Chat() {
   return <TrueForgeUI server={SERVER} layout="drawer" agentConfig={AGENT} theme={THEME} />;
 });
 
-function useEstate(intervalMs = 4000) {
-  const [state, setState] = useState({ alerts: [], deploys: [], services: [], metrics: null, error: null, loaded: false });
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const e = await fetchEstate();
-        if (alive) setState({ ...e, error: null, loaded: true });
-      } catch (err) {
-        if (alive) setState((s) => ({ ...s, error: err.message }));
-      }
-    };
-    tick();
-    const t = setInterval(tick, intervalMs);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, [intervalMs]);
+// All components share one polling loop (see estate.js): subscribing here never
+// starts a second timer, and overlapping requests are impossible by construction.
+function useEstate() {
+  const [state, setState] = useState(estateSnapshot);
+  useEffect(() => subscribeEstate(setState), []);
   return state;
 }
 
@@ -270,7 +256,7 @@ function Sidebar() {
 }
 
 function TopStatus() {
-  const estate = useEstate(5000);
+  const estate = useEstate();
   const firing = firingOf(estate).length;
   return (
     <span className="top-status">
@@ -297,14 +283,17 @@ function useThreadEmpty() {
 function prefillComposer(text) {
   const ta = document.querySelector(".chat textarea");
   if (!ta) return;
-  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
-  setter.call(ta, text);
+  // Use the prototype's native setter so React's controlled input sees the
+  // change; fall back to direct assignment if the descriptor is unavailable.
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+  if (setter) setter.call(ta, text);
+  else ta.value = text;
   ta.dispatchEvent(new Event("input", { bubbles: true }));
   ta.focus();
 }
 
 function WelcomeOverlay() {
-  const estate = useEstate(5000);
+  const estate = useEstate();
   const now = useNow(1000);
   const empty = useThreadEmpty();
   if (!empty || !estate.loaded) return null;
