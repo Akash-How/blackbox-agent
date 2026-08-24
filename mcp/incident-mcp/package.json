@@ -1,0 +1,26 @@
+{
+  "name": "incident-mcp",
+  "version": "0.1.0",
+  "description": "Mock production estate exposed as an MCP server for the BlackBox incident-response agent",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:stdio": "node src/index.js --stdio",
+    "lint": "eslint .",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
