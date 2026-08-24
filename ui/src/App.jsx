@@ -20,7 +20,7 @@ const THEME = {
     border: "rgba(255,255,255,0.08)",
     textPrimary: "#f5f5f5",
     textSecondary: "#a3a3a3",
-    fontFamily: "Inter, -apple-system, 'Segoe UI', sans-serif",
+    fontFamily: "'Space Grotesk', system-ui, sans-serif",
     inputBoxBg: "#161616",
     inputBorder: "rgba(255,255,255,0.14)",
     userMessageBg: "#1c1c1c",

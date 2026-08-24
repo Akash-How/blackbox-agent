@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap");
 
 /* ─────────────────────────────────────────────────────────────
    BlackBox — monochrome instrument panel. Pure black and white.
@@ -35,8 +35,9 @@
   /* live indicator ink: dim when calm, full white when incident */
   --live: var(--border-3);
 
-  --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --sans: "Space Grotesk", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --display: "Anton", Impact, sans-serif;
 
   --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --sh-composer: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -51,7 +52,6 @@ body {
   font-family: var(--sans);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv01", "ss03";
   overflow: clip;
 }
 
@@ -381,14 +381,20 @@ html[data-status="incident"] .top-status .dot {
 }
 .welcome-context .live-dot { width: 7px; height: 7px; }
 .welcome-greeting {
-  font-size: 23px; font-weight: 400; letter-spacing: -0.02em;
-  line-height: 1.4; color: var(--text-3);
+  font-size: 14px; font-weight: 400;
+  line-height: 1.5; color: var(--text-3);
 }
 .welcome-greeting .fail {
-  font-family: var(--mono); font-size: 0.88em; font-weight: 500;
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
   color: var(--text-1);
 }
-.welcome-greeting .ask { color: var(--text-1); }
+.welcome-greeting .ask {
+  display: block; margin-top: 8px;
+  font-family: var(--display); font-weight: 400;
+  font-size: 34px; line-height: 1.08;
+  letter-spacing: 0.015em; text-transform: uppercase;
+  color: var(--text-1);
+}
 .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .chip {
   display: flex; align-items: center; text-align: left;
