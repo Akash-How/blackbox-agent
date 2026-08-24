@@ -26,8 +26,9 @@ async function callTool(name, args = {}) {
 export const SERVICES = ["checkout-service", "payments-service", "catalog-service"];
 
 export async function fetchEstate() {
-  const [alerts, ...services] = await Promise.all([
+  const [alerts, deploys, ...services] = await Promise.all([
     callTool("list_alerts"),
+    callTool("get_recent_deploys"),
     ...SERVICES.map((s) => callTool("get_service_status", { service: s })),
   ]);
   let metrics = null;
@@ -39,5 +40,5 @@ export async function fetchEstate() {
       metrics = null;
     }
   }
-  return { alerts, services, metrics, at: Date.now() };
+  return { alerts, deploys, services, metrics, at: Date.now() };
 }
